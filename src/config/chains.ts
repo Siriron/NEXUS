@@ -7,7 +7,7 @@ export const STUDIONET_CONFIG = {
   explorerUrl: import.meta.env.VITE_EXPLORER_URL || 'https://explorer-studio.genlayer.com',
 }
 
-export const CONTRACT_ADDRESS =
+export const CONTRACT_ADDRESS: `0x${string}` =
   (import.meta.env.VITE_CONTRACT_ADDRESS as `0x${string}`) ||
   '0xD2d27d4Ca5cD0F38461a991E1F290173c30C292f'
 
