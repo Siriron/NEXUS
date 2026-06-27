@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Menu, X, ExternalLink } from 'lucide-react'
+import { Menu, X, ExternalLink, Sun, Moon } from 'lucide-react'
 import { useWallet } from '@/hooks/useWallet'
+import { useTheme } from '@/lib/theme'
+import { ShimmerButton } from '@/components/ui/ShimmerButton'
 import { cn } from '@/lib/utils'
 import { EXPLORER_TX_URL, DEPLOY_TX } from '@/config/chains'
 
@@ -10,6 +12,7 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const { address, shortAddress, isConnected, isConnecting, connect } = useWallet()
+  const { theme, toggle } = useTheme()
   const location = useLocation()
 
   useEffect(() => {
@@ -75,37 +78,62 @@ export default function Navbar() {
               href={`${EXPLORER_TX_URL}/${DEPLOY_TX}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm font-medium text-[#1c1a17]/50 dark:text-[#f0ebe3]/50 hover:text-accent transition-colors flex items-center gap-1"
+              className="text-sm font-medium text-[#1c1a17]/40 dark:text-[#f0ebe3]/40 hover:text-accent transition-colors flex items-center gap-1"
             >
               Contract <ExternalLink className="w-3 h-3" />
             </a>
           </div>
 
-          {/* Connect wallet */}
+          {/* Right side */}
           <div className="hidden md:flex items-center gap-3">
+            {/* Dark mode toggle */}
+            <button
+              onClick={toggle}
+              className="p-2 rounded-lg hover:bg-[#f7f4ef] dark:hover:bg-[#242018] transition-colors"
+              aria-label="Toggle theme"
+            >
+              {theme === 'dark'
+                ? <Sun className="w-4 h-4 text-[#f0ebe3]/60 hover:text-[#f0ebe3]" />
+                : <Moon className="w-4 h-4 text-[#1c1a17]/60 hover:text-[#1c1a17]" />
+              }
+            </button>
+
             {isConnected ? (
               <div className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[#ddd8ce] dark:border-[#3a3530] bg-[#f7f4ef] dark:bg-[#242018]">
                 <div className="w-2 h-2 rounded-full bg-accent animate-pulse-slow" />
                 <span className="text-sm font-mono text-[#1c1a17] dark:text-[#f0ebe3]">{shortAddress}</span>
               </div>
             ) : (
-              <button
+              <ShimmerButton
                 onClick={connect}
                 disabled={isConnecting}
-                className="shimmer-btn px-5 py-2.5 text-sm font-semibold rounded-lg disabled:opacity-60"
+                className="px-5 py-2 text-sm"
               >
                 {isConnecting ? 'Connecting...' : 'Connect Wallet'}
-              </button>
+              </ShimmerButton>
             )}
           </div>
 
-          {/* Mobile menu toggle */}
-          <button
-            onClick={() => setMenuOpen(!menuOpen)}
-            className="md:hidden p-2 rounded-lg hover:bg-[#f7f4ef] dark:hover:bg-[#242018] transition-colors"
-          >
-            {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
+          {/* Mobile: theme toggle + menu */}
+          <div className="md:hidden flex items-center gap-2">
+            <button
+              onClick={toggle}
+              className="p-2 rounded-lg hover:bg-[#f7f4ef] dark:hover:bg-[#242018] transition-colors"
+              aria-label="Toggle theme"
+            >
+              {theme === 'dark'
+                ? <Sun className="w-4 h-4 text-[#f0ebe3]/60" />
+                : <Moon className="w-4 h-4 text-[#1c1a17]/60" />
+              }
+            </button>
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="p-2 rounded-lg hover:bg-[#f7f4ef] dark:hover:bg-[#242018] transition-colors"
+              aria-label="Toggle menu"
+            >
+              {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -125,20 +153,22 @@ export default function Navbar() {
                   to={link.href}
                   className={cn(
                     'text-sm font-medium py-2',
-                    location.pathname === link.href ? 'text-accent' : 'text-[#1c1a17]/70 dark:text-[#f0ebe3]/70'
+                    location.pathname === link.href
+                      ? 'text-accent'
+                      : 'text-[#1c1a17]/70 dark:text-[#f0ebe3]/70'
                   )}
                 >
                   {link.label}
                 </Link>
               ))}
               {!isConnected && (
-                <button
+                <ShimmerButton
                   onClick={connect}
                   disabled={isConnecting}
-                  className="shimmer-btn px-5 py-2.5 text-sm font-semibold rounded-lg text-center"
+                  className="w-full py-2.5 text-sm justify-center"
                 >
                   {isConnecting ? 'Connecting...' : 'Connect Wallet'}
-                </button>
+                </ShimmerButton>
               )}
               {isConnected && (
                 <div className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[#ddd8ce] dark:border-[#3a3530] bg-[#f7f4ef] dark:bg-[#242018] w-fit">
