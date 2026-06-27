@@ -111,10 +111,10 @@ export function InView({
   className,
   variants = defaultVariants,
   transition = { duration: 0.5, ease: [0.22, 1, 0.36, 1] },
-  viewOptions = { once: true, margin: '-60px' },
+  viewOptions = { once: true, margin: '-60px' as any },
 }: InViewProps) {
   const ref = useRef(null)
-  const inView = useInView(ref, viewOptions)
+  const inView = useInView(ref, viewOptions as any)
 
   return (
     <motion.div

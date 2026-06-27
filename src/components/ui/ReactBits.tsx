@@ -45,8 +45,8 @@ export function SplitText({
         <motion.span
           key={i}
           className="inline-block"
-          initial={from}
-          animate={inView ? to : from}
+          initial={from as any}
+          animate={(inView ? to : from) as any}
           transition={{
             duration,
             delay: delay + i * (splitType === 'chars' ? 0.03 : 0.06),
