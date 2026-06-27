@@ -72,4 +72,4 @@ VITE_EXPLORER_URL=https://explorer-studio.genlayer.com
 
 See [`contracts/nexus.py`](./contracts/nexus.py) and [`docs/contracts.md`](./docs/contracts.md).
 
-No ETH handling. No token transfers. No financial rewards. Pure neutral utility registry.
+No ETH handling. No token transfers. No financial rewards. Pure neutral utility registry
