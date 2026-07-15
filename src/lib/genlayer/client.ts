@@ -1,6 +1,14 @@
 import { createClient } from 'genlayer-js'
-import { studionet } from 'genlayer-js/chains'
-import { STUDIONET_CONFIG } from '@/config/chains'
+import { studionet, testnetBradbury } from 'genlayer-js/chains'
+import { NETWORKS, getActiveNetwork } from '@/config/chains'
+
+function activeConfig() {
+  return NETWORKS[getActiveNetwork()]
+}
+
+function activeChain() {
+  return getActiveNetwork() === 'studionet' ? studionet : testnetBradbury
+}
 
 interface EthereumProvider {
   isMetaMask?: boolean
@@ -59,14 +67,15 @@ export async function getCurrentChainId(): Promise<string | null> {
 export async function addGenLayerNetwork(): Promise<void> {
   const provider = getEthereumProvider()
   if (!provider) throw new Error('MetaMask is not installed')
+  const cfg = activeConfig()
   await provider.request({
     method: 'wallet_addEthereumChain',
     params: [{
-      chainId: STUDIONET_CONFIG.chainIdHex,
-      chainName: STUDIONET_CONFIG.chainName,
-      nativeCurrency: STUDIONET_CONFIG.nativeCurrency,
-      rpcUrls: [STUDIONET_CONFIG.rpcUrl],
-      blockExplorerUrls: [STUDIONET_CONFIG.explorerUrl],
+      chainId: cfg.chainIdHex,
+      chainName: cfg.chainName,
+      nativeCurrency: cfg.nativeCurrency,
+      rpcUrls: [cfg.rpcUrl],
+      blockExplorerUrls: [cfg.explorerUrl],
     }],
   })
 }
@@ -74,10 +83,11 @@ export async function addGenLayerNetwork(): Promise<void> {
 export async function switchToGenLayerNetwork(): Promise<void> {
   const provider = getEthereumProvider()
   if (!provider) throw new Error('MetaMask is not installed')
+  const cfg = activeConfig()
   try {
     await provider.request({
       method: 'wallet_switchEthereumChain',
-      params: [{ chainId: STUDIONET_CONFIG.chainIdHex }],
+      params: [{ chainId: cfg.chainIdHex }],
     })
   } catch (error: any) {
     const needsAdd =
@@ -95,7 +105,7 @@ export async function switchToGenLayerNetwork(): Promise<void> {
 export async function isOnGenLayerNetwork(): Promise<boolean> {
   const chainId = await getCurrentChainId()
   if (!chainId) return false
-  return parseInt(chainId, 16) === STUDIONET_CONFIG.chainId
+  return parseInt(chainId, 16) === activeConfig().chainId
 }
 
 export async function connectMetaMask(): Promise<string> {
@@ -108,7 +118,7 @@ export async function connectMetaMask(): Promise<string> {
 }
 
 export function createGenLayerClient(address?: string) {
-  const config: any = { chain: studionet }
+  const config: any = { chain: activeChain() }
   if (address) config.account = address as `0x${string}`
   return createClient(config)
 }
