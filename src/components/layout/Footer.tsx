@@ -1,9 +1,19 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ExternalLink, Github } from 'lucide-react'
-import { CONTRACT_ADDRESS, EXPLORER_TX_URL, DEPLOY_TX, STUDIONET_CONFIG } from '@/config/chains'
+import { NETWORKS, getActiveNetwork, getContractAddress, getExplorerTxUrl, getDeployTx, onNetworkChange, NetworkKey } from '@/config/chains'
 
 export default function Footer() {
-  const shortAddr = `${CONTRACT_ADDRESS.slice(0, 6)}...${CONTRACT_ADDRESS.slice(-4)}`
+  const [network, setNetwork] = useState<NetworkKey>(getActiveNetwork())
+  const [address, setAddress] = useState(getContractAddress())
+
+  useEffect(() => onNetworkChange((n) => {
+    setNetwork(n)
+    setAddress(getContractAddress())
+  }), [])
+
+  const shortAddr = address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'not deployed'
+  const cfg = NETWORKS[network]
 
   return (
     <footer className="border-t border-[#ddd8ce] dark:border-[#3a3530] bg-[#f7f4ef] dark:bg-[#242018]">
@@ -34,7 +44,7 @@ export default function Footer() {
                 <Github className="w-4 h-4" /> GitHub
               </a>
               <a
-                href={`${EXPLORER_TX_URL}/${DEPLOY_TX}`}
+                href={`${getExplorerTxUrl()}/${getDeployTx()}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1.5 text-sm text-[#1c1a17]/60 dark:text-[#f0ebe3]/60 hover:text-accent transition-colors"
@@ -69,12 +79,12 @@ export default function Footer() {
             <ul className="space-y-2.5">
               <li>
                 <span className="text-xs text-[#1c1a17]/40 dark:text-[#f0ebe3]/40 block mb-1">Network</span>
-                <span className="text-sm font-mono text-[#1c1a17]/70 dark:text-[#f0ebe3]/70">{STUDIONET_CONFIG.chainName}</span>
+                <span className="text-sm font-mono text-[#1c1a17]/70 dark:text-[#f0ebe3]/70">{cfg.chainName}</span>
               </li>
               <li>
                 <span className="text-xs text-[#1c1a17]/40 dark:text-[#f0ebe3]/40 block mb-1">Contract</span>
                 <a
-                  href={`${EXPLORER_TX_URL}/${DEPLOY_TX}`}
+                  href={`${cfg.explorerUrl}/address/${address}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm font-mono text-accent hover:underline"
@@ -84,7 +94,7 @@ export default function Footer() {
               </li>
               <li>
                 <span className="text-xs text-[#1c1a17]/40 dark:text-[#f0ebe3]/40 block mb-1">Chain ID</span>
-                <span className="text-sm font-mono text-[#1c1a17]/70 dark:text-[#f0ebe3]/70">{STUDIONET_CONFIG.chainId}</span>
+                <span className="text-sm font-mono text-[#1c1a17]/70 dark:text-[#f0ebe3]/70">{cfg.chainId}</span>
               </li>
             </ul>
           </div>

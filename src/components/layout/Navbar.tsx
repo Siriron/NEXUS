@@ -6,7 +6,7 @@ import { useWallet } from '@/hooks/useWallet'
 import { useTheme } from '@/lib/theme'
 import { ShimmerButton } from '@/components/ui/ShimmerButton'
 import { cn } from '@/lib/utils'
-import { EXPLORER_TX_URL, DEPLOY_TX } from '@/config/chains'
+import { NETWORKS, NetworkKey, getActiveNetwork, setActiveNetwork, getExplorerTxUrl, getDeployTx, onNetworkChange } from '@/config/chains'
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
@@ -14,6 +14,11 @@ export default function Navbar() {
   const { address, shortAddress, isConnected, isConnecting, connect } = useWallet()
   const { theme, toggle } = useTheme()
   const location = useLocation()
+  const [network, setNetwork] = useState<NetworkKey>(getActiveNetwork())
+
+  useEffect(() => onNetworkChange((n) => setNetwork(n)), [])
+
+  const switchNetwork = (n: NetworkKey) => setActiveNetwork(n)
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20)
@@ -74,8 +79,24 @@ export default function Navbar() {
                 {link.label}
               </Link>
             ))}
+            <div className="flex items-center rounded-lg border border-[#ddd8ce] dark:border-[#3a3530] p-0.5 text-xs font-medium">
+              {(Object.keys(NETWORKS) as NetworkKey[]).map((key) => (
+                <button
+                  key={key}
+                  onClick={() => switchNetwork(key)}
+                  className={cn(
+                    'px-2.5 py-1 rounded-md transition-colors duration-150',
+                    network === key
+                      ? 'bg-accent text-[#f0ebe3]'
+                      : 'text-[#1c1a17]/60 dark:text-[#f0ebe3]/60 hover:text-[#1c1a17] dark:hover:text-[#f0ebe3]'
+                  )}
+                >
+                  {NETWORKS[key].name}
+                </button>
+              ))}
+            </div>
             <a
-              href={`${EXPLORER_TX_URL}/${DEPLOY_TX}`}
+              href={`${getExplorerTxUrl()}/${getDeployTx()}`}
               target="_blank"
               rel="noopener noreferrer"
               className="text-sm font-medium text-[#1c1a17]/40 dark:text-[#f0ebe3]/40 hover:text-accent transition-colors flex items-center gap-1"
@@ -147,6 +168,22 @@ export default function Navbar() {
             className="md:hidden bg-[#f0ebe3] dark:bg-[#1a1714] border-b border-[#ddd8ce] dark:border-[#3a3530]"
           >
             <div className="px-4 py-4 flex flex-col gap-4">
+              <div className="flex items-center gap-1 rounded-lg border border-[#ddd8ce] dark:border-[#3a3530] p-0.5 text-xs font-medium w-fit">
+                {(Object.keys(NETWORKS) as NetworkKey[]).map((key) => (
+                  <button
+                    key={key}
+                    onClick={() => switchNetwork(key)}
+                    className={cn(
+                      'px-3 py-1.5 rounded-md transition-colors duration-150',
+                      network === key
+                        ? 'bg-accent text-[#f0ebe3]'
+                        : 'text-[#1c1a17]/60 dark:text-[#f0ebe3]/60'
+                    )}
+                  >
+                    {NETWORKS[key].name}
+                  </button>
+                ))}
+              </div>
               {navLinks.map(link => (
                 <Link
                   key={link.href}
