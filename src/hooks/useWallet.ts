@@ -6,6 +6,7 @@ import {
   isOnGenLayerNetwork,
   getEthereumProvider,
 } from '@/lib/genlayer/client'
+import { onNetworkChange } from '@/config/chains'
 
 interface WalletState {
   address: string | null
@@ -57,6 +58,11 @@ export function useWallet() {
       provider.removeListener('chainChanged', onChainChanged)
     }
   }, [checkConnection])
+
+  // Re-check "correct network" status when the person switches the
+  // active network via the navbar toggle (not just when MetaMask itself
+  // reports a chain change).
+  useEffect(() => onNetworkChange(() => { checkConnection() }), [checkConnection])
 
   const connect = useCallback(async () => {
     if (!isMetaMaskInstalled()) {

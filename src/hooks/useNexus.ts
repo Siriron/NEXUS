@@ -39,5 +39,24 @@ export function useNexus(address: string | null) {
     }
   }, [address, getContract])
 
-  return { loading, error, txHash, getTotal, getAllAudits, getAudit, submitAudit }
+  const disputeAudit = useCallback(async (auditId: number, counterClaim: string, counterEvidenceUrl: string): Promise<boolean> => {
+    if (!address) { setError('Please connect your wallet first.'); return false }
+    setLoading(true)
+    setError(null)
+    setTxHash(null)
+    try {
+      const contract = getContract()
+      contract.updateAccount(address)
+      const receipt = await contract.disputeAudit(auditId, counterClaim, counterEvidenceUrl)
+      setTxHash(receipt?.hash || receipt?.transaction_hash || null)
+      setLoading(false)
+      return true
+    } catch (err: any) {
+      setError(err.message || 'Dispute transaction failed')
+      setLoading(false)
+      return false
+    }
+  }, [address, getContract])
+
+  return { loading, error, txHash, getTotal, getAllAudits, getAudit, submitAudit, disputeAudit }
 }
