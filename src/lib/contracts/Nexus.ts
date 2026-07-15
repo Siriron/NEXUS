@@ -1,7 +1,22 @@
 import { createClient } from 'genlayer-js'
 import { TransactionStatus } from 'genlayer-js/types'
-import { studionet } from 'genlayer-js/chains'
-import { CONTRACT_ADDRESS } from '@/config/chains'
+import { studionet, testnetBradbury } from 'genlayer-js/chains'
+import { getContractAddress, getActiveNetwork } from '@/config/chains'
+
+function chainForActive() {
+  return getActiveNetwork() === 'studionet' ? studionet : testnetBradbury
+}
+
+export interface DisputeRecord {
+  disputer: string
+  counter_claim: string
+  counter_evidence_url: string
+  prior_verdict: string
+  new_verdict: string
+  new_risk_score: string
+  reasoning: string
+  created_at: string
+}
 
 export interface AuditReport {
   audit_id: string
@@ -12,7 +27,10 @@ export interface AuditReport {
   risk_score: string
   findings: string
   summary: string
+  metadata_note?: string
   status: string
+  disputed?: boolean
+  dispute?: DisputeRecord | null
   created_at: string
 }
 
@@ -21,15 +39,16 @@ class NexusContract {
   private client: ReturnType<typeof createClient>
 
   constructor(address?: string | null) {
-    this.contractAddress = CONTRACT_ADDRESS
-    const config: any = { chain: studionet }
+    this.contractAddress = getContractAddress()
+    const config: any = { chain: chainForActive() }
     if (address) config.account = address as `0x${string}`
     this.client = createClient(config)
   }
 
   updateAccount(address: string): void {
+    this.contractAddress = getContractAddress()
     this.client = createClient({
-      chain: studionet,
+      chain: chainForActive(),
       account: address as `0x${string}`,
     })
   }
@@ -97,6 +116,21 @@ class NexusContract {
       address: this.contractAddress,
       functionName: 'submit_audit',
       args: [repoUrl, claim],
+      value: BigInt(0),
+    })
+    const receipt = await this.client.waitForTransactionReceipt({
+      hash,
+      status: TransactionStatus.FINALIZED,
+      retries: 200,
+    })
+    return receipt
+  }
+
+  async disputeAudit(auditId: number, counterClaim: string, counterEvidenceUrl: string): Promise<any> {
+    const hash = await this.client.writeContract({
+      address: this.contractAddress,
+      functionName: 'dispute_audit',
+      args: [auditId, counterClaim, counterEvidenceUrl],
       value: BigInt(0),
     })
     const receipt = await this.client.waitForTransactionReceipt({
