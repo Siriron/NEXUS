@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { GitBranch, FileCheck, AlertCircle, CheckCircle, ExternalLink, Loader2 } from 'lucide-react'
 import { useWallet } from '@/hooks/useWallet'
 import { useNexus } from '@/hooks/useNexus'
-import { EXPLORER_TX_URL } from '@/config/chains'
+import { getExplorerTxUrl } from '@/config/chains'
 
 export default function SubmitAudit() {
   const { address, isConnected, connect, isConnecting } = useWallet()
@@ -73,7 +73,7 @@ export default function SubmitAudit() {
                 Your audit has been submitted and the result will be stored onchain once validators reach consensus.
               </p>
               <a
-                href={`${EXPLORER_TX_URL}/${txHash}`}
+                href={`${getExplorerTxUrl()}/${txHash}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 text-sm font-semibold text-accent hover:underline"

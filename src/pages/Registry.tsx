@@ -1,8 +1,10 @@
 import { useEffect, useState, useCallback } from 'react'
-import { motion } from 'framer-motion'
-import { Search, RefreshCw, ExternalLink, AlertCircle } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Search, RefreshCw, ExternalLink, AlertCircle, Flag, Loader2 } from 'lucide-react'
 import NexusContract, { type AuditReport } from '@/lib/contracts/Nexus'
-import { EXPLORER_TX_URL, DEPLOY_TX } from '@/config/chains'
+import { getExplorerTxUrl, getDeployTx, onNetworkChange } from '@/config/chains'
+import { useWallet } from '@/hooks/useWallet'
+import { useNexus } from '@/hooks/useNexus'
 
 function VerdictBadge({ verdict }: { verdict: string }) {
   const map: Record<string, string> = {
@@ -31,10 +33,35 @@ function RiskBar({ score }: { score: number }) {
   )
 }
 
-function AuditCard({ audit, index }: { audit: AuditReport; index: number }) {
+function AuditCard({ audit, index, onDisputed }: { audit: AuditReport; index: number; onDisputed?: () => void }) {
   const short = (url: string) => url.replace('https://github.com/', '').replace('https://', '')
   const findings = (() => { try { return JSON.parse(audit.findings) } catch { return [] } })()
   const date = new Date(audit.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+
+  const { address, isConnected, connect } = useWallet()
+  const { disputeAudit } = useNexus(address)
+  const [disputing, setDisputing] = useState(false)
+  const [counterClaim, setCounterClaim] = useState('')
+  const [counterUrl, setCounterUrl] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [disputeErr, setDisputeErr] = useState('')
+
+  const handleDispute = async () => {
+    if (!isConnected) { connect(); return }
+    if (!counterClaim.trim()) return
+    setSubmitting(true)
+    setDisputeErr('')
+    const ok = await disputeAudit(Number(audit.audit_id), counterClaim.trim(), counterUrl.trim())
+    setSubmitting(false)
+    if (ok) {
+      setDisputing(false)
+      setCounterClaim('')
+      setCounterUrl('')
+      onDisputed?.()
+    } else {
+      setDisputeErr('Dispute failed. Check your wallet and network.')
+    }
+  }
 
   return (
     <motion.div
@@ -54,7 +81,7 @@ function AuditCard({ audit, index }: { audit: AuditReport; index: number }) {
             {short(audit.repo_url)} <ExternalLink className="w-3 h-3 shrink-0" />
           </a>
           <p className="text-xs text-[#1c1a17]/50 dark:text-[#f0ebe3]/50 mt-1 font-mono">
-            #{audit.audit_id} · {date}
+            #{audit.audit_id} · {date}{audit.disputed ? ' · disputed' : ''}
           </p>
         </div>
         <VerdictBadge verdict={audit.verdict} />
@@ -67,6 +94,12 @@ function AuditCard({ audit, index }: { audit: AuditReport; index: number }) {
       {audit.summary && (
         <p className="text-sm text-[#1c1a17]/60 dark:text-[#f0ebe3]/60 mb-4 leading-relaxed">
           {audit.summary}
+        </p>
+      )}
+
+      {audit.metadata_note && (
+        <p className="text-xs text-[#1c1a17]/45 dark:text-[#f0ebe3]/45 mb-4 leading-relaxed">
+          <span className="font-semibold">Independent metadata:</span> {audit.metadata_note}
         </p>
       )}
 
@@ -95,15 +128,67 @@ function AuditCard({ audit, index }: { audit: AuditReport; index: number }) {
         <span className="text-xs font-mono text-[#1c1a17]/30 dark:text-[#f0ebe3]/30 truncate">
           {audit.submitter.slice(0, 10)}...
         </span>
-        <a
-          href={`${EXPLORER_TX_URL}/${DEPLOY_TX}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-xs text-accent hover:underline flex items-center gap-1"
-        >
-          Onchain <ExternalLink className="w-3 h-3" />
-        </a>
+        <div className="flex items-center gap-3">
+          {!audit.disputed && (
+            <button
+              onClick={() => setDisputing((d) => !d)}
+              className="text-xs text-amber-700 dark:text-amber-500 hover:underline flex items-center gap-1"
+            >
+              <Flag className="w-3 h-3" /> Dispute
+            </button>
+          )}
+          <a
+            href={`${getExplorerTxUrl()}/${getDeployTx()}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-accent hover:underline flex items-center gap-1"
+          >
+            Onchain <ExternalLink className="w-3 h-3" />
+          </a>
+        </div>
       </div>
+
+      <AnimatePresence>
+        {disputing && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="mt-4 pt-4 border-t border-[#ddd8ce] dark:border-[#3a3530] space-y-2">
+              <p className="text-[11px] text-[#1c1a17]/50 dark:text-[#f0ebe3]/50">
+                Contest this verdict. Validators will re-check the claim against your
+                counter-evidence and the original fetched sources.
+              </p>
+              <textarea
+                value={counterClaim}
+                onChange={e => setCounterClaim(e.target.value)}
+                placeholder="Why is this verdict wrong?"
+                rows={2}
+                maxLength={500}
+                className="w-full px-3 py-2 rounded-lg border border-[#ddd8ce] dark:border-[#3a3530] bg-[#f0ebe3] dark:bg-[#1a1714] text-xs text-[#1c1a17] dark:text-[#f0ebe3] focus:outline-none focus:border-accent"
+              />
+              <input
+                type="url"
+                value={counterUrl}
+                onChange={e => setCounterUrl(e.target.value)}
+                placeholder="Counter-evidence URL (optional)"
+                className="w-full px-3 py-2 rounded-lg border border-[#ddd8ce] dark:border-[#3a3530] bg-[#f0ebe3] dark:bg-[#1a1714] text-xs text-[#1c1a17] dark:text-[#f0ebe3] focus:outline-none focus:border-accent"
+              />
+              {disputeErr && <p className="text-xs text-red-600">{disputeErr}</p>}
+              <button
+                onClick={handleDispute}
+                disabled={submitting || !counterClaim.trim()}
+                className="shimmer-btn px-3 py-2 text-xs font-semibold rounded-lg flex items-center gap-1.5 disabled:opacity-40"
+              >
+                {submitting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Flag className="w-3 h-3" />}
+                {submitting ? 'Submitting…' : isConnected ? 'Submit Dispute' : 'Connect Wallet to Dispute'}
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   )
 }
@@ -133,6 +218,10 @@ export default function Registry() {
   }, [])
 
   useEffect(() => { fetchAudits() }, [fetchAudits])
+
+  // Re-fetch immediately when the person switches networks, since audits
+  // are network-specific (different contract, different data).
+  useEffect(() => onNetworkChange(() => fetchAudits()), [fetchAudits])
 
   useEffect(() => {
     let result = audits
@@ -226,7 +315,7 @@ export default function Registry() {
           {!loading && !error && filtered.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filtered.map((audit, i) => (
-                <AuditCard key={audit.audit_id} audit={audit} index={i} />
+                <AuditCard key={audit.audit_id} audit={audit} index={i} onDisputed={fetchAudits} />
               ))}
             </div>
           )}

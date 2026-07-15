@@ -1,47 +1,53 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { CONTRACT_ADDRESS, STUDIONET_CONFIG, DEPLOY_TX, EXPLORER_TX_URL } from '@/config/chains'
+import { NETWORKS, getActiveNetwork, getContractAddress, getExplorerTxUrl, getDeployTx, onNetworkChange, NetworkKey } from '@/config/chains'
 
-const sections = [
+function buildSections(network: NetworkKey) {
+  const cfg = NETWORKS[network]
+  const address = getContractAddress()
+  return [
   {
     id: 'overview',
     title: 'Overview',
     content: `NEXUS is an AI-native onchain code audit protocol built on GenLayer. It allows any developer to submit a GitHub repository alongside a specific claim about their codebase — and receive a verifiable, consensus-backed audit result stored permanently in a GenLayer Intelligent Contract.
 
-Unlike traditional audits (expensive, opaque, centralized), NEXUS leverages GenLayer's Optimistic Democracy consensus to have multiple independent AI validators independently fetch your code, analyze your claim, and agree on a result — without any human intermediary.`,
+Every audit checks the claim against TWO independent sources: the repo's own README/source files, and GitHub's REST API metadata (stars, issues, last-updated) — data the submitter does not author as prose. A second party can also dispute a completed audit once, supplying a counter-claim or counter-evidence URL, triggering a fresh consensus round.
+
+Unlike traditional audits (expensive, opaque, centralized), NEXUS leverages GenLayer's Optimistic Democracy consensus to have multiple independent AI validators independently fetch this evidence, analyze the claim, and agree on a result — without any human intermediary.`,
   },
   {
     id: 'how-it-works',
     title: 'How It Works',
-    content: `1. Connect your MetaMask wallet to GenLayer Studio (Chain ID: 61999).
+    content: `1. Connect your MetaMask wallet to ${cfg.chainName} (Chain ID: ${cfg.chainId}).
 2. Submit your GitHub repository URL and a specific claim about your code.
-3. GenLayer validators independently fetch your README and source files via GitHub's raw API.
+3. GenLayer validators independently fetch your README, source files, and GitHub API metadata.
 4. Each validator runs the analysis independently and returns a structured result.
-5. The leader and validators compare: verdicts must match exactly, risk scores within ±2.
-6. Once consensus is reached, the result is written permanently to the smart contract.`,
+5. The leader and validators compare: verdicts must match exactly, risk scores within ±2, and the reasoning field must be non-trivial.
+6. Once consensus is reached, the result is written permanently to the smart contract.
+7. Any second party (not the submitter) may call dispute_audit() once, triggering a fresh consensus round that weighs their counter-claim against the original evidence.`,
   },
   {
     id: 'architecture',
     title: 'Architecture',
     content: `Frontend: React + Vite + TypeScript + Tailwind CSS + Framer Motion
-SDK: genlayer-js ^1.1.7 (studionet chain)
+SDK: genlayer-js ^1.1.7 (StudioNet + Bradbury, switchable in the navbar)
 Contract: Python GenLayer Intelligent Contract
-Storage: TreeMap[u256, AuditReport] — immutable onchain records
-Nondet: gl.nondet.web.get() → gl.nondet.exec_prompt() pipe-delimited response
-Consensus: gl.vm.run_nondet_unsafe() — leader/validator pattern
-Response format: AUDIT=<verdict>|<risk_score>|<findings>|<summary>`,
+Storage: TreeMap[u256, AuditReport] + TreeMap[u256, DisputeRecord] — immutable onchain records
+Nondet: gl.nondet.web.get() (README + source + GitHub API metadata) → gl.nondet.exec_prompt()
+Consensus: gl.vm.run_nondet_unsafe() — leader/validator pattern with independent re-derivation`,
   },
   {
     id: 'contract',
     title: 'Smart Contract',
-    content: `Contract Address: ${CONTRACT_ADDRESS}
-Network: ${STUDIONET_CONFIG.chainName} (Chain ID: ${STUDIONET_CONFIG.chainId})
-Deploy TX: ${DEPLOY_TX}
-Explorer: ${EXPLORER_TX_URL}/${DEPLOY_TX}
+    content: `Contract Address: ${address || '(not deployed on this network yet)'}
+Network: ${cfg.chainName} (Chain ID: ${cfg.chainId})
+Deploy TX: ${getDeployTx() || '(n/a)'}
+Explorer: ${getExplorerTxUrl()}/${getDeployTx() || ''}
 
 Functions:
 • submit_audit(repo_url: str, claim: str) → None
-• get_audit(audit_id: int) → str (JSON)
+• dispute_audit(audit_id: int, counter_claim: str, counter_evidence_url: str) → None
+• get_audit(audit_id: int) → str (JSON, includes dispute if present)
 • get_all_audits(limit: int) → str (JSON array)
 • get_total() → str (JSON)`,
   },
@@ -55,6 +61,7 @@ Functions:
 
 Write functions (wallet required):
 • submitAudit(repoUrl: string, claim: string): Promise<receipt>
+• disputeAudit(auditId: number, counterClaim: string, counterEvidenceUrl: string): Promise<receipt>
 
 AuditReport shape:
 {
@@ -66,7 +73,9 @@ AuditReport shape:
   risk_score: string  // "1"–"10"
   findings: string    // JSON array
   summary: string
+  metadata_note: string  // what the independent GitHub API metadata showed
   status: string      // "COMPLETE"
+  disputed: boolean
   created_at: string
 }`,
   },
@@ -76,25 +85,34 @@ AuditReport shape:
     content: `Q: How long does an audit take?
 A: Typically 2–5 minutes. The transaction finalizes once all validators reach consensus.
 
-Q: What files do validators fetch?
-A: README.md from the main branch, plus common source files (src/index.ts, main.py, etc.).
+Q: What evidence do validators check?
+A: The repo's README.md, a source file sample, and GitHub's REST API metadata (stars, issues, last-updated) — an independent signal the submitter doesn't author.
+
+Q: Can I dispute an audit I disagree with?
+A: Yes, once per audit, if you're not the original submitter. Call dispute_audit() with a counter-claim and optional counter-evidence URL.
 
 Q: Can I audit a private repo?
-A: Not currently — validators fetch from GitHub's public raw API. Public repos only.
+A: Not currently — validators fetch from GitHub's public raw API and REST API. Public repos only.
 
 Q: What does NEEDS_REVIEW mean?
 A: Insufficient evidence was found to conclusively support or refute your claim.
 
 Q: Can audit results be changed?
-A: No. All results are written to an immutable TreeMap in the GenLayer contract. No admin functions.
+A: Only once, via a genuine dispute from a second party. There are no admin override functions.
 
 Q: What is the risk score?
 A: 1 = very low risk / claim well supported. 10 = high risk / claim unsupported or contradicted.`,
   },
 ]
+}
 
 export default function Docs() {
   const [active, setActive] = useState('overview')
+  const [network, setNetwork] = useState<NetworkKey>(getActiveNetwork())
+
+  useEffect(() => onNetworkChange((n) => setNetwork(n)), [])
+
+  const sections = buildSections(network)
 
   return (
     <div className="min-h-screen pt-24 pb-20 px-4 sm:px-6 lg:px-8">

@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { ExternalLink, RefreshCw, Plus, AlertCircle } from 'lucide-react'
 import { useWallet } from '@/hooks/useWallet'
 import NexusContract, { type AuditReport } from '@/lib/contracts/Nexus'
-import { EXPLORER_TX_URL, DEPLOY_TX } from '@/config/chains'
+import { getExplorerTxUrl, getDeployTx } from '@/config/chains'
 
 function VerdictBadge({ verdict }: { verdict: string }) {
   const map: Record<string, string> = {
@@ -159,7 +159,7 @@ export default function MyAudits() {
                         Risk: {Number(audit.risk_score)}/10
                       </span>
                       <a
-                        href={`${EXPLORER_TX_URL}/${DEPLOY_TX}`}
+                        href={`${getExplorerTxUrl()}/${getDeployTx()}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-xs text-accent hover:underline flex items-center gap-1"
