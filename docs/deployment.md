@@ -1,5 +1,7 @@
 # Deployment Guide
 
+> **Note:** redeployed post-fix (independent GitHub API metadata fetch + dispute mechanic added) to both networks — StudioNet at `0x62E1D57199FefF364A00DeE0059abdE3303A286c`, Bradbury at `0x33bcb525b70E6fe59883Eeb7BC0Efa557df1463d`. Any older address referenced elsewhere in this doc is stale.
+
 ## Contract Deployment
 
 1. Open https://studio.genlayer.com
