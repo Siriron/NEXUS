@@ -5,7 +5,7 @@ import { SpotlightCard } from '@/components/ui/Spotlight'
 import { InView } from '@/components/ui/MotionPrimitives'
 import { ShinyText } from '@/components/ui/ReactBits'
 import { Magnet } from '@/components/ui/ReactBits'
-import { EXPLORER_TX_URL, DEPLOY_TX } from '@/config/chains'
+import { getExplorerTxUrl, getDeployTx } from '@/config/chains'
 
 export default function CTA() {
   return (
@@ -51,7 +51,7 @@ export default function CTA() {
                     </Link>
                   </Magnet>
                   <a
-                    href={`${EXPLORER_TX_URL}/${DEPLOY_TX}`}
+                    href={`${getExplorerTxUrl()}/${getDeployTx()}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="px-8 py-3.5 text-base font-semibold rounded-[10px] border border-[#ddd8ce] dark:border-[#3a3530] hover:border-accent/50 text-[#1c1a17] dark:text-[#f0ebe3] transition-all hover:bg-accent/5 flex items-center gap-2"
