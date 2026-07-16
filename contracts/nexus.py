@@ -291,8 +291,8 @@ class NEXUSCore(gl.Contract):
         self._validating_dispute_block = ""
 
         result_str = gl.vm.run_nondet_unsafe(
-            leader_fn=lambda: self._audit_leader(repo_url, claim),
-            validator_fn=lambda leaders_res: self._audit_validator(leaders_res),
+            lambda: self._audit_leader(repo_url, claim),
+            lambda leaders_res: self._audit_validator(leaders_res),
         )
         parsed = json.loads(result_str)
 
@@ -356,8 +356,8 @@ class NEXUSCore(gl.Contract):
         self._validating_dispute_block = dispute_block
 
         result_str = gl.vm.run_nondet_unsafe(
-            leader_fn=lambda: self._audit_leader(record.repo_url, record.claim, dispute_block),
-            validator_fn=lambda leaders_res: self._audit_validator(leaders_res),
+            lambda: self._audit_leader(record.repo_url, record.claim, dispute_block),
+            lambda leaders_res: self._audit_validator(leaders_res),
         )
         parsed = json.loads(result_str)
 
